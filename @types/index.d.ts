@@ -16,20 +16,27 @@ declare namespace FibPoolNS {
     interface FibPoolOptionDestoryor<T = any> {
         (item?: T): void;
     }
+    interface FibPoolOptionHeart<T = any>{
+        (item?: T): void;
+    }
     type FibPoolRetryCountType = number | boolean
     interface FibPoolOptionArgs<T = any> {
         create?: FibPoolOptionCreator
         destroy?: FibPoolOptionDestoryor<T>
+        heart?: FibPoolOptionHeart<T>
         maxsize?: number
         timeout?: number
-        retry?: FibPoolRetryCountType
+        retry?: FibPoolRetryCountType,
+        heartInterval?:number,
     }
     interface FibPoolOptionResult {
         create: FibPoolOptionCreator
         destroy: FibPoolOptionDestoryor
         maxsize: number
         timeout: number
-        retry: FibPoolRetryCountType
+        retry: FibPoolRetryCountType,
+        heartInterval?: number,
+        heart?:FibPoolOptionHeart,
     }
     type FibPoolOptsArg = FibPoolOptionArgs | FibPoolOptionCreator
 

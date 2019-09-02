@@ -11,17 +11,19 @@ function ensureError (e: string | Error) {
    return e
 }
 
-const Pool = function<T1, T2> (_opt: FibPoolNS.FibPoolOptsArg, maxsize?: number, timeout?: number): FibPoolNS.FibPoolFunction<T1, T2> {
+const Pool = function<T1, T2> (_opt: FibPoolNS.FibPoolOptsArg, maxsize?: number, timeout?: number, heartInterval?:number): FibPoolNS.FibPoolFunction<T1, T2> {
     var opt: FibPoolNS.FibPoolOptionResult = _opt as FibPoolNS.FibPoolOptionResult;
     if (util.isFunction(_opt)) {
         opt = {
             create: _opt,
             maxsize: maxsize,
-            timeout: timeout
+            timeout: timeout,
+            heartInterval: heartInterval
         } as FibPoolNS.FibPoolOptionResult;
     }
 
-    var create = opt.create;
+    var create = opt.create; //创建函数
+    var heart = opt.heart; //心跳检测函数
     var destroy = opt.destroy || ((o: FibPoolNS.FibPoolObjectToExtract) => {
         if (util.isFunction(o.close))
             o.close();
@@ -36,7 +38,7 @@ const Pool = function<T1, T2> (_opt: FibPoolNS.FibPoolOptsArg, maxsize?: number,
     var tm = timeout / 10;
     if (tm < 10)
         tm = 10;
-
+    var tm_heart = opt.heartInterval || 3180;
     var retry = opt.retry || 1;
 
     var pools: FibPoolNS.FibPoolUnit[] = [];
@@ -46,7 +48,8 @@ const Pool = function<T1, T2> (_opt: FibPoolNS.FibPoolOptsArg, maxsize?: number,
 
     var sem = new coroutine.Semaphore(maxsize);
     var clearTimer: Class_Timer;
-
+    var heartTimer: Class_Timer;
+    //清理-超时未活跃的对象
     function clearPool() {
         var c: FibPoolNS.FibPoolUnit;
         var d = new Date().getTime();
@@ -64,15 +67,44 @@ const Pool = function<T1, T2> (_opt: FibPoolNS.FibPoolOptsArg, maxsize?: number,
                 break;
         }
 
+        checkTimer();
+    }
+    //对每个对象心跳检测
+    function heartPool() {
+        var c;
+        var n = count;
+        while (count && n > 0) {
+            c = pools[--n];
+            try {
+                heart(c.o);
+            }
+            catch (e) {
+                pools.splice(pools.indexOf(c), 1);
+                count--;
+                coroutine.start(destroy, c.o);
+                // console.log("heart_", e)
+            }
+        }
+        checkTimer();
+    }
+    function checkTimer() {
         if (!count) {
             if (clearTimer) {
                 clearTimer.clear();
                 clearTimer = null;
             }
-        } else if (!clearTimer)
-            clearTimer = setInterval(clearPool, tm);
+            if (heartTimer) {
+                heartTimer.clear();
+                heartTimer = null;
+            }
+        }
+        else {
+            if (!clearTimer)
+                clearTimer = setInterval(clearPool, tm);
+            if (!heartTimer && heart)
+                heartTimer = setInterval(heartPool, tm_heart);
+        }
     }
-
     function putback(
         name: FibPoolNS.FibPoolInnerJobName,
         o: FibPoolNS.FibPoolPayloadObject,
