@@ -22,8 +22,8 @@ const Pool = function<T1, T2> (_opt: FibPoolNS.FibPoolOptsArg, maxsize?: number,
         } as FibPoolNS.FibPoolOptionResult;
     }
 
-    var create = opt.create; //创建函数
-    var heart = opt.heart; //心跳检测函数
+    var create = opt.create;//obj_create_fn
+    var heart = opt.heart;//obj_heart_keep_safe_fn
     var destroy = opt.destroy || ((o: FibPoolNS.FibPoolObjectToExtract) => {
         if (util.isFunction(o.close))
             o.close();
@@ -49,7 +49,7 @@ const Pool = function<T1, T2> (_opt: FibPoolNS.FibPoolOptsArg, maxsize?: number,
     var sem = new coroutine.Semaphore(maxsize);
     var clearTimer: Class_Timer;
     var heartTimer: Class_Timer;
-    //清理-超时未活跃的对象
+
     function clearPool() {
         var c: FibPoolNS.FibPoolUnit;
         var d = new Date().getTime();
@@ -69,7 +69,7 @@ const Pool = function<T1, T2> (_opt: FibPoolNS.FibPoolOptsArg, maxsize?: number,
 
         checkTimer();
     }
-    //对每个对象心跳检测
+
     function heartPool() {
         var c;
         var n = count;
@@ -82,7 +82,6 @@ const Pool = function<T1, T2> (_opt: FibPoolNS.FibPoolOptsArg, maxsize?: number,
                 pools.splice(pools.indexOf(c), 1);
                 count--;
                 coroutine.start(destroy, c.o);
-                // console.log("heart_", e)
             }
         }
         checkTimer();

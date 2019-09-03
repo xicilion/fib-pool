@@ -248,7 +248,42 @@ describe("pool", () => {
         assert.isTrue(called);
         assert.equal(p.connections(), 0);
     });
+    it("heart interval check", () => {
+        var destoryNum = 0;
+        var heartNum = 0;
+        var heartDestory = 0;
+        var p = Pool({
+            create: () => {
+                return {t:Date.now()};
+            },
+            destroy: (o) => {
+                destoryNum++;
+                if(o.test_heart_dispose){
+                    heartDestory++;
+                }
+            },
+            heart: (o) => {
+                heartNum++;
+                o.test_heart=(o.test_heart || 0) + 1;
+                if(o.test_heart == 2){
+                    o.test_heart_dispose = true;
+                    throw new Error("check_bad_pool_obj");
+                }
+            },
+            timeout: 20,
+            heartInterval: 5,
+        });
 
+        p((v) => {});
+
+        assert.isFalse(destoryNum<0);
+        assert.equal(p.connections(), 1);
+        coroutine.sleep(100);
+        assert.isTrue(destoryNum>0);
+        assert.isTrue(heartNum>1);
+        assert.isTrue(heartDestory>0);
+        assert.equal(p.connections(), 0);
+    });
     it("retry", () => {
         var n = 0;
 

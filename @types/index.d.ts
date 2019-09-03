@@ -27,7 +27,7 @@ declare namespace FibPoolNS {
         maxsize?: number
         timeout?: number
         retry?: FibPoolRetryCountType,
-        heartInterval?:number,
+        heartInterval?: number,
     }
     interface FibPoolOptionResult {
         create: FibPoolOptionCreator
@@ -36,7 +36,7 @@ declare namespace FibPoolNS {
         timeout: number
         retry: FibPoolRetryCountType,
         heartInterval?: number,
-        heart?:FibPoolOptionHeart,
+        heart?: FibPoolOptionHeart,
     }
     type FibPoolOptsArg = FibPoolOptionArgs | FibPoolOptionCreator
 
